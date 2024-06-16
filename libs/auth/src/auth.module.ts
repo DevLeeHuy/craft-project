@@ -4,6 +4,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from '@app/auth/guards/auth/auth.guard';
 import { ContextModule } from '@app/context';
 import { CachingModule } from '@app/caching';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import {
+  jwtConfig,
+  JwtConfigInterface,
+  jwtConfigToken,
+} from '@app/auth/config/jwt.config';
 
 export const jwtConstants = {
   secret: 'mock_secret',
@@ -12,10 +18,18 @@ export const jwtConstants = {
 
 @Module({
   imports: [
-    JwtModule.register({
-      global: true,
-      secret: jwtConstants.secret,
-      signOptions: { expiresIn: '60m' },
+    ConfigModule.forFeature(jwtConfig),
+    JwtModule.registerAsync({
+      imports: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const jwtConfigData =
+          configService.get<JwtConfigInterface>(jwtConfigToken);
+        return {
+          global: true,
+          secret: jwtConfigData.secret,
+          signOptions: { expiresIn: jwtConfigData.expiresIn },
+        };
+      },
     }),
     ContextModule,
     CachingModule,
